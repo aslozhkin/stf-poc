@@ -20,23 +20,14 @@ services:
       - storage-temp
       - websocket
       - api
-  adb:
-    image: sorccu/adb:latest
-    restart: unless-stopped
-#    privileged: true
-    devices:
-      - /dev/bus/usb/001/002:/dev/bus/usb/001/002
-  adb2:
-    image: sorccu/adb:latest
-    restart: unless-stopped
-#    privileged: true
-    devices:
-      - /dev/bus/usb/001/004:/dev/bus/usb/001/004
   rethinkdb:
     image: rethinkdb:2.3
-    restart: unless-stopped
+    restart: always
     volumes:
       - rethinkdb:/data
+    ports:
+      - 28015:28015
+    command: rethinkdb --bind all
   app:
     image: openstf/stf:latest
     restart: unless-stopped
@@ -75,6 +66,10 @@ services:
     image: openstf/stf:latest
     restart: unless-stopped
     command: stf triproxy dev --bind-pub "tcp://*:7250" --bind-dealer "tcp://*:7260" --bind-pull "tcp://*:7270"
+    ports:
+      - 7250:7250
+      - 7260:7260
+      - 7270:7270
   migrate:
     image: openstf/stf:latest
     environment:
@@ -82,28 +77,6 @@ services:
     command: stf migrate
     depends_on:
       - rethinkdb
-  provider2:
-    image: openstf/stf:latest
-    restart: unless-stopped
-    command: stf provider --name redmigo_provider --connect-sub tcp://dev-triproxy:7250 --connect-push tcp://dev-triproxy:7270 --storage-url http://${PUBLIC_IP}/ --public-ip ${PUBLIC_IP} --heartbeat-interval 10000 --screen-ws-url-pattern "ws://${PUBLIC_IP}/d/${PUBLIC_IP}/<%= serial %>/<%= publicPort %>/" --adb-host adb2 --min-port 7701 --max-port 8100 --allow-remote
-    ports:
-      - 7701-8100:7701-8100
-    depends_on:
-      - adb2
-      - dev-triproxy
-      - triproxy
-      - storage-temp
-  provider:
-    image: openstf/stf:latest
-    restart: unless-stopped
-    command: stf provider --name honor8x_provider --connect-sub tcp://dev-triproxy:7250 --connect-push tcp://dev-triproxy:7270 --storage-url http://${PUBLIC_IP}/ --public-ip ${PUBLIC_IP} --heartbeat-interval 10000 --screen-ws-url-pattern "ws://${PUBLIC_IP}/d/${PUBLIC_IP}/<%= serial %>/<%= publicPort %>/" --adb-host adb --min-port 7400 --max-port 7700 --allow-remote
-    ports:
-      - 7400-7700:7400-7700
-    depends_on:
-      - adb
-      - dev-triproxy
-      - triproxy
-      - storage-temp
   reaper:
     image: openstf/stf:latest
     restart: unless-stopped
